@@ -17,7 +17,7 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  # Create environment and install dependences dependencies
+  # Create environment and install dependencies
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
   - conda activate test-environment
   - conda install -q --yes compilers matplotlib pytest pytest-cov coveralls pip openmdao jsonschema ruamel_yaml pyyaml make xlrd cython pandas numpydoc six setuptools git numpy scipy geopy testflo cmake dill smt seaborn
