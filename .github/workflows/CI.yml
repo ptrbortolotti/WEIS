@@ -39,7 +39,7 @@ jobs:
       - name: Env
         run: |
           conda create -q -n weis-env python=3.8
-          conda activate weis-env
+          source activate weis-env
       
       # Install dependencies
       - name: Dependencies
