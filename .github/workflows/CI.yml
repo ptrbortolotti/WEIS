@@ -37,28 +37,53 @@ jobs:
       - run: which python
       
       # Install dependencies
-      - name: Dependencies
+      - name: Install dependencies
         run: |
           conda install -y cmake cython geopy git jsonschema make matplotlib-base numpy numpydoc openmdao openpyxl pandas pip pytest pyyaml ruamel_yaml scipy setuptools shapely six sympy swig xlrd
           pip install simpy marmot-agents
       
-      - name: mac specific
+      - name: Add dependendencies macOS specific
         if: contains( matrix.os, 'macOS')
         run: |
           conda install -y petsc4py mpi4py compilers
           
-      - name: ubuntu specific
+      - name: Add dependendencies ubuntu specific
         if: contains( matrix.os, 'ubuntu')
         run: |
           conda install -y petsc4py mpi4py compilers
         
-      - name: windows specific
+      - name: Add dependendencies windows specific
         if: contains( matrix.os, 'windows')
         run: |
           conda install -y m2w64-toolchain libpython
           
-      - name: clone and install
+      - name: Install WEIS
         run: |
           python setup.py develop
+          
+      - name: Run examples aeroelasticse
+        run: |
+          cd examples/aeroelasticse
+          python run_DLC.py
+          python run_general.py
+          cd ..
+      
+      - name: Run examples rotor optimization
+        run: |
+          cd rotor_opt
+          python weis_driver.py
+          cd ..
+          
+      - name: Run examples distributed aerodynamic control
+        run: |
+          cd dac
+          python dac_driver.py
+          cd ..
+
+
+
+          
+          
+          
         
         
