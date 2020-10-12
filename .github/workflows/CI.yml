@@ -85,7 +85,7 @@ jobs:
       # Run scripts within dac folder
       - name: Run examples distributed aerodynamic control
         run: |
-          cd examples/dac
+          cd examples/dac_flaps
           python dac_driver.py
 
 
