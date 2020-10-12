@@ -34,15 +34,6 @@ jobs:
           conda-channels: anaconda, conda-forge
       - run: conda --version
       - run: which python
-
-
-      # Create environment
-      - name: Env
-        shell: bash
-        run: |
-          conda create -n weis-env python=${{ matrix.python-version }}
-          conda init bash
-          conda activate weis-env
       
       # Install dependencies
       - name: Dependencies
