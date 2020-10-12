@@ -40,7 +40,7 @@ jobs:
       - name: Env
         shell: bash
         run: |
-          conda create -n weis-env python=3.8
+          conda create -n weis-env python=${{ matrix.python-version }}
           conda activate weis-env
       
       # Install dependencies
