@@ -55,3 +55,11 @@ jobs:
         if: contains( matrix.os, 'windows')
         run: |
           conda install -y m2w64-toolchain libpython
+          
+      - name: clone and install
+        run: |
+          pwd 
+          cd $GITHUB_WORKSPACE
+          python setup.py develop
+        
+        
