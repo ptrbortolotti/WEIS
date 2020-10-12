@@ -58,8 +58,6 @@ jobs:
           
       - name: clone and install
         run: |
-          pwd 
-          cd $GITHUB_WORKSPACE
           python setup.py develop
         
         
