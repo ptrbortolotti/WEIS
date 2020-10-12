@@ -41,6 +41,7 @@ jobs:
         shell: bash
         run: |
           conda create -n weis-env python=${{ matrix.python-version }}
+          conda init bash
           conda activate weis-env
       
       # Install dependencies
