@@ -40,3 +40,18 @@ jobs:
         run: |
           conda install -y cmake cython geopy git jsonschema make matplotlib-base numpy numpydoc openmdao openpyxl pandas pip pytest pyyaml ruamel_yaml scipy setuptools shapely six sympy swig xlrd
           pip install simpy marmot-agents
+      
+      - name: mac specific
+        if: contains( matrix.os, 'macOS')
+        run: |
+          conda install -y petsc4py mpi4py compilers
+          
+      - name: ubuntu specific
+        if: contains( matrix.os, 'ubuntu')
+        run: |
+          conda install -y petsc4py mpi4py compilers
+        
+      - name: windows specific
+        if: contains( matrix.os, 'windows')
+        run: |
+          conda install -y m2w64-toolchain libpython
