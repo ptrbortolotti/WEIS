@@ -66,19 +66,17 @@ jobs:
           cd examples/aeroelasticse
           python run_DLC.py
           python run_general.py
-          cd ..
       
       - name: Run examples rotor optimization
         run: |
-          cd rotor_opt
+          cd examples/rotor_opt
           python weis_driver.py
-          cd ..
+          mpirun -np 4 python weis_driver.py
           
       - name: Run examples distributed aerodynamic control
         run: |
-          cd dac
+          cd examples/dac
           python dac_driver.py
-          cd ..
 
 
 
