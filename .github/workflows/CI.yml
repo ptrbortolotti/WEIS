@@ -83,10 +83,10 @@ jobs:
           mpirun -np 4 python weis_driver.py
       
       # Run scripts within dac folder
-      - name: Run examples distributed aerodynamic control
-        run: |
-          cd examples/dac_flaps
-          python dac_driver.py
+      # - name: Run examples distributed aerodynamic control
+      #  run: |
+      #    cd examples/dac_flaps
+      #    python dac_driver.py
 
 
 
