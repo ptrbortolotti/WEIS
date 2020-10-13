@@ -92,7 +92,10 @@ for pkg in ['WISDEM','ROSCO_toolbox','pCrunch','pyoptsparse']:
     if pkg == 'pyoptsparse':
         # Build pyOptSparse specially
         # run_setup('setup.py', script_args=['build_ext', '--inplace'])
-        run_setup('setup.py', script_args=['install'])
+        try:
+            run_setup('setup.py', script_args=['install'])
+        except:
+            pass
     else:
         run_setup('setup.py', script_args=sys.argv[1:], stop_after='run')
     # subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", "."])  # This option runs `pip install -e .` on each package
