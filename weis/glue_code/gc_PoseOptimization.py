@@ -205,6 +205,8 @@ class PoseOptimizationWEIS(PoseOptimization):
     def set_constraints(self, wt_opt):
         super(PoseOptimizationWEIS, self).set_constraints(wt_opt)
 
+        wt_opt.model.add_constraint('aeroelastic.Ct_out', upper=0.81802385)
+
         blade_opt = self.opt["design_variables"]["blade"]
         blade_constr = self.opt["constraints"]["blade"]
         if blade_constr['tip_deflection']['flag']:
