@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 from weis.aeroelasticse.IEC_CoeherentGusts import IEC_CoherentGusts
 
@@ -219,7 +220,7 @@ class Turbsim_wrapper(object):
         subprocess.call(exec_string)
         os.chdir(olddir)
 
-def generate_wind_files(dlc_generator, FAST_namingOut, wind_directory, rotorD, hub_height, i_case):
+def generate_wind_files(dlc_generator, FAST_namingOut, wind_directory, rotorD, hub_height, turbsim_exe, i_case):
 
     if dlc_generator.cases[i_case].turbulent_wind:
         # Write out turbsim input file
@@ -253,8 +254,8 @@ def generate_wind_files(dlc_generator, FAST_namingOut, wind_directory, rotorD, h
             # Run TurbSim in sequence
             wrapper = Turbsim_wrapper()
             wrapper.run_dir = wind_directory
-            run_dir = os.path.dirname( os.path.dirname( os.path.dirname( os.path.realpath(__file__) ) ) ) + os.sep
-            wrapper.turbsim_exe = os.path.join(run_dir, 'local/bin/turbsim')
+            #run_dir = os.path.dirname( os.path.dirname( os.path.dirname( os.path.realpath(__file__) ) ) ) + os.sep
+            wrapper.turbsim_exe = turbsim_exe
             wrapper.turbsim_input = turbsim_input_file_name
             wrapper.execute()
 
