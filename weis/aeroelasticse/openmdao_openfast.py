@@ -1774,8 +1774,8 @@ class FASTLoadCases(ExplicitComponent):
         mean_wind_speed = np.zeros(dlc_generator.n_cases)
         yaw_misalignment = np.zeros(dlc_generator.n_cases)
         DT = np.full(dlc_generator.n_cases, fill_value = fst_vt['Fst']['DT'])
-        aero_mod = np.full(dlc_generator.n_cases, fill_value = fst_vt['AeroDyn15']['AFAeroMod'])
-        wake_mod = np.full(dlc_generator.n_cases, fill_value = fst_vt['AeroDyn15']['WakeMod'])
+        # aero_mod = np.full(dlc_generator.n_cases, fill_value = fst_vt['AeroDyn15']['AFAeroMod'])
+        wake_mod = np.full(dlc_generator.n_cases, fill_value = fst_vt['AeroDyn15']['Wake_Mod'])
         tau1_const = np.zeros(dlc_generator.n_cases)
         dt_fvw = np.zeros(dlc_generator.n_cases)
         tMin = np.zeros(dlc_generator.n_cases)
@@ -1808,7 +1808,7 @@ class FASTLoadCases(ExplicitComponent):
                 # Height of wind grid, it stops 1 mm above the ground
                 # dlc_generator.cases[i_case].GridHeight = 2. * hub_height - 1.e-3
                 # If OLAF is called, make wind grid 3x higher, taller, and wider
-                if fst_vt['AeroDyn15']['WakeMod'] == 3:
+                if fst_vt['AeroDyn15']['Wake_Mod'] == 3:
                     dlc_generator.cases[i_case].HubHt *= 3.
                     dlc_generator.cases[i_case].GridHeight *= 3.
                     # This is to go around a bug in TurbSim, which won't run if GridWidth is smaller than GridHeight
@@ -1836,7 +1836,7 @@ class FASTLoadCases(ExplicitComponent):
                 idx_e = min((i+1)*size, N_cases)
 
                 for idx, i_case in enumerate(np.arange(idx_s,idx_e)):
-                    data = [partial(generate_wind_files, dlc_generator, self.FAST_namingOut, self.wind_directory, rotorD, hub_height, self.turbsim_exe), i_case]
+                    data = [partial(generate_wind_files, dlc_generator, self.FAST_namingOut, self.wind_directory, rotorD, hub_height), i_case]
                     rank_j = sub_ranks[idx]
                     comm.send(data, dest=rank_j, tag=0)
 
@@ -1846,8 +1846,8 @@ class FASTLoadCases(ExplicitComponent):
         else:
             for i_case in range(dlc_generator.n_cases):
                 WindFile_type[i_case] , WindFile_name[i_case] = generate_wind_files(
-                    dlc_generator, self.FAST_namingOut, self.wind_directory, rotorD, hub_height, self.turbsim_exe, i_case)
-
+                    dlc_generator, self.FAST_namingOut, self.wind_directory, rotorD, hub_height, i_case)
+                
         # Set initial rotor speed and pitch if the WT operates in this DLC and available,
         # otherwise set pitch to 90 deg and rotor speed to 0 rpm when not operating
         # set rotor speed to rated and pitch to 15 deg if operating
@@ -1892,7 +1892,7 @@ class FASTLoadCases(ExplicitComponent):
                 rot_speed_initial[i_case] = 0.
                 pitch_initial[i_case] = 90.
                 shutdown_time[i_case] = 0
-                aero_mod[i_case] = 1
+                # aero_mod[i_case] = 1
                 wake_mod[i_case] = 0
                 tau1_const[i_case] = 0.
 
@@ -1956,8 +1956,8 @@ class FASTLoadCases(ExplicitComponent):
         case_inputs[("ServoDyn","TPitManS3")] = {'vals':shutdown_time, 'group':1}
 
         # Inputs to AeroDyn (parking)
-        case_inputs[("AeroDyn15","AFAeroMod")] = {'vals':aero_mod, 'group':1}
-        case_inputs[("AeroDyn15","WakeMod")] = {'vals':wake_mod, 'group':1}
+        # case_inputs[("AeroDyn15","AFAeroMod")] = {'vals':aero_mod, 'group':1}
+        case_inputs[("AeroDyn15","Wake_Mod")] = {'vals':wake_mod, 'group':1}
         case_inputs[("AeroDyn15","tau1_const")] = {'vals':tau1_const, 'group':1}
 
         # Inputs to OLAF

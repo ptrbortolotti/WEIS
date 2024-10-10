@@ -1988,10 +1988,10 @@ class InputReader_OpenFAST(object):
         self.fst_vt['HydroDyn']['ExctnMod']      = int_read(f.readline().split()[0])
         self.fst_vt['HydroDyn']['ExctnDisp']     = int_read(f.readline().split()[0])
         self.fst_vt['HydroDyn']['ExctnCutOff']   = int_read(f.readline().split()[0])
-        # self.fst_vt['HydroDyn']['PtfmYMod']      = int_read(f.readline().split()[0])
-        # self.fst_vt['HydroDyn']['PtfmRefY']      = float_read(f.readline().split()[0])
-        # self.fst_vt['HydroDyn']['PtfmYCutOff']   = float_read(f.readline().split()[0])
-        # self.fst_vt['HydroDyn']['NExctnHdg']     = int_read(f.readline().split()[0])
+        self.fst_vt['HydroDyn']['PtfmYMod']      = int_read(f.readline().split()[0])
+        self.fst_vt['HydroDyn']['PtfmRefY']      = float_read(f.readline().split()[0])
+        self.fst_vt['HydroDyn']['PtfmYCutOff']   = float_read(f.readline().split()[0])
+        self.fst_vt['HydroDyn']['NExctnHdg']     = int_read(f.readline().split()[0])
         self.fst_vt['HydroDyn']['RdtnMod']       = int_read(f.readline().split()[0])
         self.fst_vt['HydroDyn']['RdtnTMax']      = float_read(f.readline().split()[0])
         self.fst_vt['HydroDyn']['RdtnDT']        = float_read(f.readline().split()[0])
@@ -2451,12 +2451,12 @@ class InputReader_OpenFAST(object):
         self.fst_vt['SubDyn']['SDdeltaT']  = float_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['IntMethod'] = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['SttcSolve'] = bool_read(f.readline().split()[0])
-        self.fst_vt['SubDyn']['GuyanLoadCorrection'] = bool_read(f.readline().split()[0])
+        # self.fst_vt['SubDyn']['GuyanLoadCorrection'] = bool_read(f.readline().split()[0])
         f.readline()
         # FEA and CRAIG-BAMPTON PARAMETERS
         self.fst_vt['SubDyn']['FEMMod']    = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['NDiv']      = int_read(f.readline().split()[0])
-        self.fst_vt['SubDyn']['CBMod']     = bool_read(f.readline().split()[0])
+        # self.fst_vt['SubDyn']['CBMod']     = bool_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['Nmodes']    = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['JDampings'] = float_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['GuyanDampMod'] = int_read(f.readline().split()[0])
@@ -3302,8 +3302,8 @@ class InputReader_OpenFAST(object):
             if self.fst_vt['ServoDyn']['VSContrl'] == 3: # user-defined from routine UserVSCont refered
                 self.read_spd_trq('spd_trq.dat')
         hd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['HydroFile']))
-        # if os.path.isfile(hd_file): 
-        #     self.read_HydroDyn(hd_file)
+        if os.path.isfile(hd_file): 
+            self.read_HydroDyn(hd_file)
         ss_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SeaState']))
         if os.path.isfile(ss_file):
             self.read_SeaState(ss_file)
