@@ -2,7 +2,7 @@ name: CI_WEIS
 
 # We run CI on push commits on all branches
 on: [push, pull_request]
-
+    
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
@@ -11,96 +11,144 @@ jobs:
 
     defaults:
         run:
-            shell: bash -l {0}
+            shell: bash -el {0}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "macOS-latest"]
-        python-version: ["3.9","3.10"]
+        os: ["ubuntu-latest", "macOS-13", "macOS-latest", "windows-latest"] # mac13 is intel, mac-14 arm
+        python-version: ["3.11","3.12"]
         
     steps:
-      - uses: actions/checkout@v3
-
-      # This is the more official way to do miniconda, but it messes with the GitHub worker environment and shell quite a bit
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: actions/checkout@v4
+    
+      - name: Install conda/mamba
+        uses: conda-incubator/setup-miniconda@v3
         # https://github.com/marketplace/actions/setup-miniconda
         with:
-          miniconda-version: "latest"
-          channels: conda-forge
+          # To use mamba, uncomment here, comment out the miniforge line
+          # mamba-version: "*"
+          miniforge-version: "latest"
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
           environment-file: environment.yml
           activate-environment: test
           auto-activate-base: false
-        
-      # This is a less official, but more lightweight way to do miniconda
-      #- uses: s-weigand/setup-conda@v1
-      #  # https://github.com/marketplace/actions/setup-conda
-      #  with:
-      #    update-conda: true
-      #    python-version: ${{ matrix.python-version }}
-      #    conda-channels: conda-forge
-      #    activate-conda: true
-      #- run: conda env update --file environment.yml
-
-      #- name: Show custom environment
-      #  shell: bash
-      #  run: |
-      #      cat $GITHUB_ENV
-      #      printenv
-
-      # Install dependencies of WISDEM specific to windows
-      - name: Add dependencies mac specific
-        if: contains( matrix.os, 'mac')
-        run: |
-            conda install -y compilers
-            gfortran --version
             
-      # Install dependencies of WISDEM specific to windows
-      - name: Add dependencies windows specific
-        if: contains( matrix.os, 'windows')
-        run: |
-          conda install -y m2w64-toolchain libpython
+      #- name: Add dependencies windows specific
+      #  if: contains( matrix.os, 'windows')
+      #  run: |
+      #    conda install -y -c intel intel-openmp mkl
       
-      # Install dependencies of WEIS specific to ubuntu
       - name: Add dependencies ubuntu specific
         if: false == contains( matrix.os, 'windows')
-        # (if you use the shell here, cannot use 'compiler' package otherwise get link problems to system libraries
-        # Mpi only seems to work with the shell command though, so instead rely on system compilers
         run: |
-          conda install -y petsc4py mpi4py openmpi
-          python -c "import platform; print(platform.node())"
-
+          conda install -y petsc4py=3.22.2 mpi4py pyoptsparse
+      
+      - name: Add test packages
+        run: |
+          conda install -y pytest pytest-cov coveralls treon gdown
+            
       - name: Show custom environment
         run: |
             conda list
-
-      # Debugging session
-      #- name: Setup tmate session
-      #  uses: mxschmitt/action-tmate@v3
+            printenv | sort
           
       # Install WEIS
       - name: Install WEIS
         run: |
-          python setup.py develop
+          python -m pip install --no-deps -e . -v
+
+      # Debugging session
+      #- name: Setup tmate session
+      #  if: contains( matrix.os, 'windows')
+      #  uses: mxschmitt/action-tmate@v3
+        
+      #- name: Show openfast environment
+      #  run: |
+      #      which -a openfast
+      #      cd /c/Miniconda3/envs/test/Library/bin/
+      #      ls *fast*.exe
+      #      ls *fast*.dll
+      #      openfast -h
+      #      python -c "import ctypes; ctypes.cdll.LoadLibrary('openfastlib.dll')"
+      #      ls *fast*.dll
+      #      cd examples/03_NREL5MW_OC3_spar
+      #      python weis_driver.py
           
       # List the collected tests for debugging purposes
-      - name: List tests
+      #- name: List tests
+      #  run: |
+      #    pytest --collect-only weis 
+
+      - name: Change examples to test mode
         run: |
-          pytest weis --collect-only
+          cd examples
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            find . -type f -name "*.py" -exec sed -i '' 's/TEST_RUN = False/TEST_RUN = True/g' {} +
+          else
+            find . -type f -name "*.py" -exec sed -i 's/TEST_RUN = False/TEST_RUN = True/g' {} +
+          fi
+          head -n 5 02_generate_openfast_model_for_dlcs/iea15_semi_driver.py   # check that the sed command worked       
+
         
       # Run all tests within WEIS, but not computationally expensive examples
       - name: Run tests within WEIS
+        if: false == contains( matrix.os, 'ubuntu') || contains( github.event_name, 'push')
         run: |
-          pytest weis --cov-config=.coverageac --cov=weis
-      
+          pytest -p no:warnings --disable-warnings --cov=weis weis
+
+      # Run long tests in on pull request
+      - name: Run exhaustive
+        if: contains( matrix.os, 'ubuntu') && contains( github.event_name, 'pull_request')
+        env:
+            RUN_EXHAUSTIVE: 1
+        run: |
+            pytest  -p no:warnings -s --disable-warnings  weis
+
+        # Test walkthrough notebook
+      - name: Test postprocessing notebooks
+        if: contains( matrix.os, 'ubuntu') && contains( github.event_name, 'pull_request')
+        env:
+            RUN_EXHAUSTIVE: 1
+        run: |
+          cd examples/07_postprocessing_notebooks
+          cp -r ../03_design_with_openfast/outputs/03_iea22_ptfm_opt/ outputs/
+          treon plot_FAST.ipynb
+          treon rev_DLCs_WEIS.ipynb
+          treon rev_Opt.ipynb
+          treon rev_WEIS_CSV.ipynb
+
+      # Run parallel script calling OpenFAST
+      - name: Run parallel cases
+        if: contains( matrix.os, 'ubuntu') && contains( github.event_name, 'pull_request')
+        env:
+            RUN_EXHAUSTIVE: 1
+        run: |
+          cd examples/01_simulate_own_openfast_model
+          mpiexec -np 2 python dlc_sim_driver.py
+          cd ../06_parametric_analysis
+          mpiexec -n 2 python raft_doe_driver.py
+          mpiexec -n 2 --bind-to core python openfast_doe_driver.py
+          python postprocess_results.py
+
+      # Skip these until we figure out MPI and overrides
+      # cd ../03_design_with_openfast
+      # mpiexec -n 2 python iea22_ptfm_opt_driver.py
+          
+      # Run scripts within dac folder
+      # - name: Run examples distributed aerodynamic control
+      #  run: |
+      #    cd examples/dac_flaps
+      #    python dac_driver.py
+            
       # Run coveralls
       - name: Run coveralls
-        if: contains( matrix.os, 'ubuntu')
-        # This also works, https://github.com/AndreMiras/coveralls-python-action
-        #uses: AndreMiras/coveralls-python-action@develop
+        if: contains( matrix.os, 'ubuntu') && contains( matrix.python-version, '3.11')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        #uses: coverallsapp/github-action@v2
+        #with:
+        #    github-token:  ${{ secrets.GITHUB_TOKEN }}
         run: |
           coveralls --service=github

@@ -10,13 +10,12 @@ examples/control_opt/run_lin_turbine.py will run outputs from gen_linear_model()
 '''
 import numpy as np
 import os
+import shutil
 
 from weis.aeroelasticse.runFAST_pywrapper import runFAST_pywrapper_batch
 from weis.aeroelasticse.CaseGen_General import CaseGen_General
-from ROSCO_toolbox import utilities as ROSCO_utilities
+from rosco.toolbox import utilities as ROSCO_utilities
 
-import weis
-weis_dir = os.path.dirname( os.path.dirname(os.path.realpath(weis.__file__) ) )  # get path to this file
 
 
 class LinearFAST(runFAST_pywrapper_batch):
@@ -31,7 +30,7 @@ class LinearFAST(runFAST_pywrapper_batch):
 
     def __init__(self, **kwargs):
 
-        self.FAST_exe           = os.path.join(weis_dir, 'local/bin/openfast')   # Path to executable, linearization doesn't work with library
+        self.FAST_exe           = shutil.which('openfast')  # Path to executable, linearization doesn't work with library
         self.FAST_InputFile     = None
         self.FAST_directory     = None
         self.FAST_runDirectory  = None
@@ -126,7 +125,8 @@ class LinearFAST(runFAST_pywrapper_batch):
         case_inputs[("InflowWind","HWindSpeed")] = {'vals':self.wind_speeds, 'group':1}  # modelling input
 
         # AeroDyn Inputs
-        case_inputs[("AeroDyn15","AFAeroMod")] = {'vals':[1], 'group':0}
+        case_inputs[("AeroDyn","DBEMT_Mod")] = {'vals':[-1], 'group':0}
+        case_inputs[("AeroDyn","UA_Mod")] = {'vals':[0], 'group':0}
 
         # Servodyn Inputs
         case_inputs[("ServoDyn","PCMode")] = {'vals':[0], 'group':0}
@@ -171,7 +171,7 @@ class LinearFAST(runFAST_pywrapper_batch):
 
         # Hydrodyn Inputs, these need to be state-space (2), but they should work if 0
         # Need to be this for linearization
-        case_inputs[("HydroDyn","WaveMod")]     = {'vals':[0], 'group':0}
+        case_inputs[("SeaState","WaveMod")]     = {'vals':[0], 'group':0}
         case_inputs[("HydroDyn","ExctnMod")]    = {'vals':[2], 'group':0}
         case_inputs[("HydroDyn","RdtnMod")]     = {'vals':[2], 'group':0}
         case_inputs[("HydroDyn","DiffQTF")]     = {'vals':[0], 'group':0}

@@ -1,0 +1,51 @@
+# .readthedocs.yaml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Set the version of Python and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "mambaforge-22.9"
+  jobs:
+    # Read the docs needs a couple packages not in the environment file
+    pre_install:
+      - conda install -y cmake compilers sphinx sphinxcontrib-bibtex sphinx-jsonschema sphinxcontrib-video
+      - conda install sphinx_rtd_theme>=1.3
+      - pip install json-schema-for-humans 
+    pre_build:
+      - pwd
+      - ls
+      - pip install -e .
+      - python -c "import weis.inputs.validation as vd; vd.write_yaml(vd.get_geometry_schema(), vd.fschema_geom)"
+      - python -c "import weis.inputs.validation as vd; vd.write_yaml(vd.get_modeling_schema(), vd.fschema_model)"
+      - python -c "import weis.inputs.validation as vd; vd.write_yaml(vd.get_analysis_schema(), vd.fschema_opt)"
+      - generate-schema-doc --no-copy-css --no-copy-js weis/inputs/modeling_schema.yaml docs/_static/modeling_doc.html
+      - generate-schema-doc --no-copy-css --no-copy-js weis/inputs/geometry_schema.yaml docs/_static/geometry_doc.html
+      - generate-schema-doc --no-copy-css --no-copy-js weis/inputs/analysis_schema.yaml docs/_static/analysis_doc.html
+
+
+# Shouldn't need conda for building the docs, but it is an option
+conda:
+  environment: environment.yml
+
+
+# Build documentation in the docs/ directory with Sphinx
+sphinx:
+   configuration: docs/conf.py
+
+# If using Sphinx, optionally build your docs in additional formats such as PDF
+# formats:
+#    - pdf
+
+# Optionally declare the Python requirements required to build your docs
+python:
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
+#  system_packages: true

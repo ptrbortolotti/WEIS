@@ -1,6 +1,8 @@
 import textwrap
 import validation
-import os, shutil
+import os
+import weis.inputs.validation as sch
+import json, copy
 
 mywidth  = 70
 myindent = ' '*4
@@ -125,20 +127,29 @@ if __name__ == '__main__':
     this_dir = os.path.dirname(__file__)
     docs_dir = os.path.realpath(os.path.join(this_dir,'../../docs/inputs'))
 
-    wisdem_docs_dir = os.path.realpath(os.path.join(this_dir,'../../WISDEM/docs/inputs'))
+    # Merge schemas, write combined schema yamls here
+    # Following https://github.com/WISDEM/WISDEM/blob/master/docs/schema/README
 
-    for ifile in ['geometry_schema.yaml','modeling_schema.yaml','analysis_schema.yaml']:
-        myobj = Schema2RST(os.path.join(this_dir,ifile))
-        myobj.write_rst()
+    modeling_schema = sch.get_modeling_schema()
+    modeling_schema['definitions'] = copy.deepcopy(modeling_schema['properties'])
+    modeling_schema.pop('properties')
+    with open(os.path.join(docs_dir,'modeling_schema.json'),'w', encoding='utf-8') as f:
+        json.dump(modeling_schema,f, ensure_ascii=False, indent=4)
 
-        # copy file to docs
-        doc_file = os.path.join(docs_dir,ifile.split('.')[0] + '.rst')
-        shutil.copyfile(os.path.join(this_dir,ifile),os.path.join(docs_dir,doc_file))
+    geometry_schema = sch.get_geometry_schema()
+    temp_defs = copy.deepcopy(geometry_schema['definitions'])
+    geometry_schema['definitions'] = copy.deepcopy(geometry_schema['properties'])
+    geometry_schema['definitions'].update(temp_defs)
+    geometry_schema.pop('properties')
+    with open(os.path.join(docs_dir,'geometry_schema.json'),'w', encoding='utf-8') as f:
+        json.dump(geometry_schema,f, ensure_ascii=False, indent=4)
 
-        # copy wisdem rsts while where here
-        doc_file = os.path.split(doc_file)[-1]
-        new_doc_file = doc_file.split('.')[0] + '_wisdem.rst'
-        shutil.copyfile(os.path.join(wisdem_docs_dir,doc_file),os.path.join(docs_dir,new_doc_file))
+    analysis_schema = sch.get_analysis_schema()
+    analysis_schema['definitions'] = copy.deepcopy(analysis_schema['properties'])
+    analysis_schema.pop('properties')
+    with open(os.path.join(docs_dir,'analysis_schema.json'),'w', encoding='utf-8') as f:
+        json.dump(analysis_schema,f, ensure_ascii=False, indent=4)
+
 
 
 

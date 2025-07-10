@@ -5,11 +5,11 @@ Nikhar J. Abbas
 January 2020
 '''
 
-from ROSCO_toolbox import controller as ROSCO_controller
-from ROSCO_toolbox import turbine as ROSCO_turbine
-from ROSCO_toolbox.inputs.validation import load_rosco_yaml
-from ROSCO_toolbox.linear.robust_scheduling import rsched_driver
-from ROSCO_toolbox.utilities import list_check, DISCON_dict
+from rosco.toolbox import controller as ROSCO_controller
+from rosco.toolbox import turbine as ROSCO_turbine
+from rosco.toolbox.inputs.validation import load_rosco_yaml
+from rosco.toolbox.linear.robust_scheduling import rsched_driver
+from rosco.toolbox.utilities import list_check, DISCON_dict
 import numpy as np
 from openmdao.api import ExplicitComponent, Group
 from wisdem.ccblade.ccblade import CCAirfoil, CCBlade
@@ -26,12 +26,12 @@ class ServoSE_ROSCO(Group):
         modeling_options = self.options['modeling_options']
         opt_options      = self.options['opt_options']
 
-        if not modeling_options['Level3']['from_openfast']:        #haven't already computed
+        if not modeling_options['OpenFAST']['from_openfast']:        #haven't already computed
             self.add_subsystem('aeroperf_tables',   Cp_Ct_Cq_Tables(modeling_options   = modeling_options), promotes = ['v_min', 'v_max','r','chord', 'theta','Rhub', 'Rtip', 'hub_height','precone', 'tilt','yaw','precurve','precurveTip','presweep','presweepTip', 'airfoils_aoa','airfoils_Re','airfoils_cl','airfoils_cd','airfoils_cm', 'nBlades', 'rho', 'mu'])
 
-        self.add_subsystem('tune_rosco',        TuneROSCO(modeling_options = modeling_options, opt_options=opt_options), promotes = ['v_min', 'v_max', 'rho', 'omega_min', 'tsr_operational', 'rated_power', 'r','chord', 'theta','Rhub', 'Rtip', 'hub_height','precone', 'tilt','yaw','precurve','precurveTip','presweep','presweepTip', 'airfoils_Ctrl', 'airfoils_aoa','airfoils_Re','airfoils_cl','airfoils_cd','airfoils_cm', 'nBlades', 'mu'])
+        self.add_subsystem('tune_rosco',        TuneROSCO(modeling_options = modeling_options, opt_options=opt_options), promotes = ['v_min', 'v_max', 'rho', 'omega_min', 'tsr_operational', 'rated_power', 'r','chord', 'theta','Rhub', 'Rtip', 'hub_height','precone', 'tilt','yaw','precurve','precurveTip','presweep','presweepTip', 'airfoils_UserProp', 'airfoils_aoa','airfoils_Re','airfoils_cl','airfoils_cd','airfoils_cm', 'nBlades', 'mu'])
 
-        if not modeling_options['Level3']['from_openfast']:        #haven't already computed
+        if not modeling_options['OpenFAST']['from_openfast']:        #haven't already computed
             # Connect ROSCO for Rotor Performance tables
             self.connect('aeroperf_tables.Cp',              'tune_rosco.Cp_table')
             self.connect('aeroperf_tables.Ct',              'tune_rosco.Ct_table')
@@ -144,7 +144,7 @@ class TuneROSCO(ExplicitComponent):
         self.add_input('airfoils_cm',   val=np.zeros((n_span, n_aoa, n_Re, n_tab)),             desc='moment coefficients, spanwise')
         self.add_input('airfoils_aoa',  val=np.zeros((n_aoa)),              units='deg',        desc='angle of attack grid for polars')
         self.add_input('airfoils_Re',   val=np.zeros((n_Re)),                                   desc='Reynolds numbers of polars')
-        self.add_input('airfoils_Ctrl', val=np.zeros((n_span, n_Re, n_tab)), units='deg',       desc='Airfoil control paremeter (i.e. flap angle)')
+        self.add_input('airfoils_UserProp', val=np.zeros((n_span, n_Re, n_tab)), units='deg',       desc='Airfoil control paremeter (i.e. flap angle)')
         self.add_discrete_input('nBlades',         val=0,                                       desc='number of blades')
         self.add_input('mu',            val=1.81e-5,                        units='kg/(m*s)',   desc='dynamic viscosity of air')
         self.add_input('shearExp',      val=0.0,                                                desc='shear exponent')
@@ -199,60 +199,61 @@ class TuneROSCO(ExplicitComponent):
         # Add control tuning parameters to dictionary
         rosco_init_options['omega_pc']    = inputs['omega_pc'].tolist()
         rosco_init_options['zeta_pc']     = inputs['zeta_pc'].tolist()
-        rosco_init_options['omega_vs']    = float(inputs['omega_vs'])
-        rosco_init_options['zeta_vs']     = float(inputs['zeta_vs'])
+        rosco_init_options['omega_vs']    = float(inputs['omega_vs'][0])
+        rosco_init_options['zeta_vs']     = float(inputs['zeta_vs'][0])
         if rosco_init_options['Flp_Mode'] > 0:
-            rosco_init_options['flp_kp_norm'] = float(inputs['flp_kp_norm'])
-            rosco_init_options['flp_tau']  = float(inputs['flp_tau'])
+            rosco_init_options['flp_kp_norm'] = float(inputs['flp_kp_norm'][0])
+            rosco_init_options['flp_tau']  = float(inputs['flp_tau'][0])
         else:
             rosco_init_options['omega_flp'] = 0.0
             rosco_init_options['zeta_flp']  = 0.0
-        rosco_init_options['max_pitch']   = float(inputs['max_pitch'])
-        rosco_init_options['min_pitch']   = float(inputs['min_pitch'])
-        rosco_init_options['vs_minspd']   = float(inputs['vs_minspd'])
-        rosco_init_options['ss_vsgain']   = float(inputs['ss_vsgain'])
-        rosco_init_options['ss_pcgain']   = float(inputs['ss_pcgain'])
-        rosco_init_options['ps_percent']  = float(inputs['ps_percent'])
-        rosco_init_options['IPC_Kp1p']    = max(0.0, float(inputs['IPC_Kp1p']))
-        rosco_init_options['IPC_Ki1p']    = max(0.0, float(inputs['IPC_Ki1p']))
+        rosco_init_options['max_pitch']   = float(inputs['max_pitch'][0])
+        rosco_init_options['min_pitch']   = float(inputs['min_pitch'][0])
+        rosco_init_options['vs_minspd']   = float(inputs['vs_minspd'][0])
+        rosco_init_options['ss_vsgain']   = float(inputs['ss_vsgain'][0])
+        rosco_init_options['ss_pcgain']   = float(inputs['ss_pcgain'][0])
+        rosco_init_options['ps_percent']  = float(inputs['ps_percent'][0])
+        rosco_init_options['IPC_Kp1p']    = max(0.0, float(inputs['IPC_Kp1p'][0]))
+        rosco_init_options['IPC_Ki1p']    = max(0.0, float(inputs['IPC_Ki1p'][0]))
         rosco_init_options['IPC_Kp2p']    = 0.0 # 2P optimization is not currently supported
         rosco_init_options['IPC_Kp2p']    = 0.0
 
         if rosco_init_options['Flp_Mode'] > 0:
-            rosco_init_options['flp_maxpit']  = float(inputs['delta_max_pos'])
+            rosco_init_options['flp_maxpit']  = float(inputs['delta_max_pos'][0])
 
-        # If Kp_float is a design variable, do not automatically tune it
+        # If Kp_float is a design variable, do not automatically tune i
         if self.opt_options['design_variables']['control']['servo']['pitch_control']['Kp_float']['flag']:
-            rosco_init_options['Kp_float'] = float(inputs['Kp_float'])
+            rosco_init_options['Kp_float'] = float(inputs['Kp_float'][0])
             rosco_init_options['tune_Fl'] = False
 
         # Define necessary turbine parameters
         WISDEM_turbine = type('', (), {})()
-        WISDEM_turbine.v_min        = float(inputs['v_min'])
-        WISDEM_turbine.J            = float(inputs['rotor_inertia'])        # TODO: ROSCO is actually looking for drivetrain inertia here!  It's been fixed from ROSCO_Turbine below, but maybe not WISDEM
-        WISDEM_turbine.rho          = float(inputs['rho'])
-        WISDEM_turbine.rotor_radius = float(inputs['R'])
-        WISDEM_turbine.Ng           = float(inputs['gear_ratio'])
+        WISDEM_turbine.v_min        = float(inputs['v_min'][0])
+        WISDEM_turbine.J            = float(inputs['rotor_inertia'][0])        # TODO: ROSCO is actually looking for drivetrain inertia here!  It's been fixed from ROSCO_Turbine below, but maybe not WISDE
+        WISDEM_turbine.rho          = float(inputs['rho'][0])
+        WISDEM_turbine.rotor_radius = float(inputs['R'][0])
+        WISDEM_turbine.Ng           = float(inputs['gear_ratio'][0])
         # Incoming value already has gearbox eff included, so have to separate it out
-        WISDEM_turbine.GenEff       = float(inputs['generator_efficiency'] / inputs['gearbox_efficiency']) * 100.
-        WISDEM_turbine.GBoxEff      = float(inputs['gearbox_efficiency']) * 100.
-        WISDEM_turbine.rated_rotor_speed   = float(inputs['rated_rotor_speed'])
-        WISDEM_turbine.rated_power  = float(inputs['rated_power'])
-        WISDEM_turbine.rated_torque = float(inputs['rated_torque']) / WISDEM_turbine.Ng * float(inputs['gearbox_efficiency'])
+        WISDEM_turbine.GenEff       = float(inputs['generator_efficiency'][0] / inputs['gearbox_efficiency'][0]) * 100.
+        WISDEM_turbine.GBoxEff      = float(inputs['gearbox_efficiency'][0]) * 100.0
+        WISDEM_turbine.rated_rotor_speed   = float(inputs['rated_rotor_speed'][0])
+        WISDEM_turbine.rated_power  = float(inputs['rated_power'][0])
+        WISDEM_turbine.rated_torque = float(inputs['rated_torque'][0]) / WISDEM_turbine.Ng * float(inputs['gearbox_efficiency'][0])
         WISDEM_turbine.max_torque   = WISDEM_turbine.rated_torque * 1.1  # TODO: make this an input if studying constant power
-        WISDEM_turbine.v_rated      = float(inputs['rated_rotor_speed'])*float(inputs['R']) / float(inputs['tsr_operational'])
-        WISDEM_turbine.v_min        = float(inputs['v_min'])
-        WISDEM_turbine.v_max        = float(inputs['v_max'])
-        WISDEM_turbine.max_pitch_rate   = float(inputs['max_pitch_rate'])
-        WISDEM_turbine.min_pitch_rate   = -float(inputs['max_pitch_rate'])
-        WISDEM_turbine.TSR_operational  = float(inputs['tsr_operational'])
-        WISDEM_turbine.max_torque_rate  = float(inputs['max_torque_rate'])
-        WISDEM_turbine.TowerHt          = float(inputs['TowerHt'])
-        WISDEM_turbine.bld_edgewise_freq = float(inputs['edge_freq']) * 2 * np.pi
+        WISDEM_turbine.v_rated      = float(inputs['rated_rotor_speed'][0])*float(inputs['R'][0]) / float(inputs['tsr_operational'][0])
+        WISDEM_turbine.v_min        = float(inputs['v_min'][0])
+        WISDEM_turbine.v_max        = float(inputs['v_max'][0])
+        WISDEM_turbine.max_pitch_rate   = float(inputs['max_pitch_rate'][0])
+        WISDEM_turbine.min_pitch_rate   = -float(inputs['max_pitch_rate'][0])
+        WISDEM_turbine.TSR_operational  = float(inputs['tsr_operational'][0])
+        WISDEM_turbine.max_torque_rate  = float(inputs['max_torque_rate'][0])
+        WISDEM_turbine.TowerHt          = float(inputs['TowerHt'][0])
+        WISDEM_turbine.bld_edgewise_freq = float(inputs['edge_freq'][0]) * 2 * np.pi
         
         # Floating Feedback Filters
-        rosco_init_options['twr_freq']      = float(inputs['twr_freq']) * 2 * np.pi
-        rosco_init_options['ptfm_freq']     = float(inputs['ptfm_freq'])
+        if self.controller_params['Fl_Mode']:
+            rosco_init_options['twr_freq'] = float(inputs['twr_freq'][0]) * 2 * np.pi
+            rosco_init_options['ptfm_freq'] = float(inputs['ptfm_freq'][0])
 
         # Load Cp tables
         self.Cp_table       = WISDEM_turbine.Cp_table = np.squeeze(inputs['Cp_table'])
@@ -282,15 +283,15 @@ class TuneROSCO(ExplicitComponent):
                     af[i] = CCAirfoil(inputs['airfoils_aoa'], inputs['airfoils_Re'], inputs['airfoils_cl'][i,:,:,0], inputs['airfoils_cd'][i,:,:,0], inputs['airfoils_cm'][i,:,:,0])
             
             # Initialize CCBlade as cc_rotor object 
-            WISDEM_turbine.cc_rotor = CCBlade(inputs['r'], inputs['chord'], inputs['theta'], af, inputs['Rhub'], inputs['Rtip'], discrete_inputs['nBlades'], inputs['rho'], inputs['mu'], inputs['precone'], inputs['tilt'], inputs['yaw'], inputs['shearExp'], inputs['hub_height'], discrete_inputs['nSector'], inputs['precurve'], inputs['precurveTip'],inputs['presweep'], inputs['presweepTip'], discrete_inputs['tiploss'], discrete_inputs['hubloss'],discrete_inputs['wakerotation'], discrete_inputs['usecd'])
+            WISDEM_turbine.cc_rotor = CCBlade(inputs['r'], inputs['chord'], inputs['theta'], af, inputs['Rhub'][0], inputs['Rtip'][0], discrete_inputs['nBlades'], inputs['rho'][0], inputs['mu'][0], inputs['precone'][0], inputs['tilt'][0], inputs['yaw'][0], inputs['shearExp'][0], inputs['hub_height'][0], discrete_inputs['nSector'], inputs['precurve'], inputs['precurveTip'][0],inputs['presweep'], inputs['presweepTip'][0], discrete_inputs['tiploss'], discrete_inputs['hubloss'],discrete_inputs['wakerotation'], discrete_inputs['usecd'])
         
             # Load aerodynamic performance data for blades
             WISDEM_turbine.af_data = [{} for i in range(self.n_span)]
             for i in range(self.n_span):
                 # Check number of flap positions for each airfoil section
                 if self.n_tab > 1:
-                    if inputs['airfoils_Ctrl'][i,0,0] == inputs['airfoils_Ctrl'][i,0,1]:
-                        n_tabs = 1  # If all Ctrl angles of the flaps are identical then no flaps
+                    if inputs['airfoils_UserProp'][i,0,0] == inputs['airfoils_UserProp'][i,0,1]:
+                        n_tabs = 1  # If all UserProp angles of the flaps are identical then no flaps
                     else:
                         n_tabs = self.n_tab
                 else:
@@ -299,7 +300,7 @@ class TuneROSCO(ExplicitComponent):
                 for j in range(n_tabs):
                     WISDEM_turbine.af_data[i][j] = {}
                     WISDEM_turbine.af_data[i][j]['NumTabs'] = n_tabs
-                    WISDEM_turbine.af_data[i][j]['Ctrl']    = inputs['airfoils_Ctrl'][i,0,j]
+                    WISDEM_turbine.af_data[i][j]['UserProp']    = inputs['airfoils_UserProp'][i,0,j]
                     WISDEM_turbine.af_data[i][j]['Alpha']   = np.array(inputs['airfoils_aoa']).flatten().tolist()
                     WISDEM_turbine.af_data[i][j]['Cl']      = np.array(inputs['airfoils_cl'][i,:,0,j]).flatten().tolist()
                     WISDEM_turbine.af_data[i][j]['Cd']      = np.array(inputs['airfoils_cd'][i,:,0,j]).flatten().tolist()
@@ -331,6 +332,10 @@ class TuneROSCO(ExplicitComponent):
             # Collect options
             rs_options = {}
             rs_options['linturb_options'] = rosco_init_options['linmodel_tuning']
+            rs_options['linturb_options']['linfile_path'] = os.path.join(
+                os.path.dirname(self.modeling_options['fname_input_modeling']),
+                rs_options['linturb_options']['linfile_path']
+                )   # Path relative to modeling options where it's defined in 
             rs_options['ROSCO_options'] = {}
             rs_options['ROSCO_options']['controller_params'] = rosco_init_options
             rs_options['path_options']  = {'output_dir': os.path.join(self.options['opt_options']['general']['folder_output'], 
@@ -338,6 +343,7 @@ class TuneROSCO(ExplicitComponent):
                                            'output_name': 'robust_scheduling'
                                           }
             rs_options['opt_options']   = scheduling_options
+            os.makedirs(rs_options['path_options']['output_dir'],exist_ok=True)
 
             # Add inputs to ROSCO_options to bypass need to generate turbine object in the ROSCO toolbox
             rs_options['ROSCO_options']['dict_inputs'] = inputs
@@ -359,7 +365,7 @@ class TuneROSCO(ExplicitComponent):
         ROSCO_input = DISCON_dict(WISDEM_turbine,controller)
 
         # Cp table info
-        ROSCO_input['v_rated'] = float(inputs['v_rated'])
+        ROSCO_input['v_rated'] = float(inputs['v_rated'][0])
         ROSCO_input['Cp_pitch_initial_rad'] = self.pitch_vector
         ROSCO_input['Cp_TSR_initial'] = self.tsr_vector
         ROSCO_input['Cp_table'] = WISDEM_turbine.Cp_table
@@ -369,7 +375,7 @@ class TuneROSCO(ExplicitComponent):
         ROSCO_input['Ct'] = WISDEM_turbine.Ct
         ROSCO_input['Cq'] = WISDEM_turbine.Cq
 
-        if (self.modeling_options['Level2']['flag'] or self.modeling_options['Level3']['flag']):
+        if (self.modeling_options['OpenFAST_Linear']['flag'] or self.modeling_options['OpenFAST']['flag']):
             self.modeling_options['General']['openfast_configuration']['fst_vt']['DISCON_in'] = ROSCO_input
         
         # Outputs 
@@ -482,7 +488,7 @@ class Cp_Ct_Cq_Tables(ExplicitComponent):
         tsr_vector = inputs['tsr_vector_in']
         pitch_vector = inputs['pitch_vector_in']
 
-        self.ccblade = CCBlade(inputs['r'], inputs['chord'], inputs['theta'], af, inputs['Rhub'], inputs['Rtip'], discrete_inputs['nBlades'], inputs['rho'], inputs['mu'], inputs['precone'], inputs['tilt'], inputs['yaw'], inputs['shearExp'], inputs['hub_height'], discrete_inputs['nSector'], inputs['precurve'], inputs['precurveTip'],inputs['presweep'], inputs['presweepTip'], discrete_inputs['tiploss'], discrete_inputs['hubloss'],discrete_inputs['wakerotation'], discrete_inputs['usecd'])
+        self.ccblade = CCBlade(inputs['r'], inputs['chord'], inputs['theta'], af, inputs['Rhub'][0], inputs['Rtip'][0], discrete_inputs['nBlades'], inputs['rho'][0], inputs['mu'][0], inputs['precone'][0], inputs['tilt'][0], inputs['yaw'][0], inputs['shearExp'][0], inputs['hub_height'][0], discrete_inputs['nSector'], inputs['precurve'], inputs['precurveTip'][0],inputs['presweep'], inputs['presweepTip'][0], discrete_inputs['tiploss'], discrete_inputs['hubloss'],discrete_inputs['wakerotation'], discrete_inputs['usecd'])
         
         if max(U_vector) == 0.:
             U_vector    = np.linspace(V_in[0],V_out[0], n_U)
@@ -521,24 +527,19 @@ class ROSCO_Turbine(ExplicitComponent):
         if parameter_filename == 'none':
             raise Exception('A ROSCO tuning_yaml must be specified in the modeling_options if from_OpenFAST is True')
 
-        if not os.path.isabs(parameter_filename):
-            parameter_filename = os.path.join(weis_dir,parameter_filename)
-
-        inps = load_rosco_yaml(parameter_filename)
+        inps = load_rosco_yaml(parameter_filename, rank_0=True)
         self.turbine_params         = inps['turbine_params']
         self.control_params         = inps['controller_params']
 
-        FAST_InputFile = modeling_options['Level3']['openfast_file']    # FAST input file (ext=.fst)
-        FAST_directory = modeling_options['Level3']['openfast_dir']   # Path to fst directory files
-        if not os.path.isabs(FAST_directory):
-            FAST_directory = os.path.join(weis_dir,FAST_directory)
+        FAST_InputFile = modeling_options['OpenFAST']['openfast_file']    # FAST input file (ext=.fst)
+        FAST_directory = modeling_options['OpenFAST']['openfast_dir']   # Path to fst directory files
             
 
         # Instantiate turbine, controller, and file processing classes
         self.turbine         = ROSCO_turbine.Turbine(self.turbine_params)
 
         # Load turbine data from OpenFAST and compute Cp surface here
-        self.turbine.load_from_fast(FAST_InputFile, FAST_directory, dev_branch=True)
+        self.turbine.load_from_fast(FAST_InputFile, FAST_directory)
 
         self.add_output('rotor_inertia',     val=0.0,        units='kg*m**2',        desc='Rotor inertia')
         self.add_output('rho',               val=0.0,        units='kg/m**3',        desc='Air Density')
@@ -604,7 +605,8 @@ class ROSCO_Turbine(ExplicitComponent):
         outputs['edge_freq'              ] = self.turbine.bld_edgewise_freq / 2 / np.pi   # tuning yaml  in rad/s, WISDEM values in Hz: convert to Hz
         outputs['TowerHt'                ] = self.turbine.TowerHt
         outputs['hub_height'             ] = self.turbine.hubHt
-        outputs['twr_freq'               ] = self.control_params['twr_freq'] / 2 / np.pi  # tuning yaml  in rad/s, WISDEM values in Hz: convert to Hz
+        if self.control_params['Fl_Mode']:
+            outputs['twr_freq'               ] = self.control_params['twr_freq'] / 2 / np.pi  # tuning yaml  in rad/s, WISDEM values in Hz: convert to Hz
 
         # Rotor Performance
         outputs['Cp_table'               ] = self.turbine.Cp.performance_table
