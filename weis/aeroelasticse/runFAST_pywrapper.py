@@ -214,7 +214,8 @@ class runFAST_pywrapper(object):
             FAST_Output_txt = os.path.join(wrapper.FAST_directory, wrapper.FAST_InputFile[:-3]+'out')
 
             #check if OpenFAST is set not to overwrite existing output files, TODO: move this further up in the workflow for minor computation savings
-            if self.overwrite_outfiles or (not self.overwrite_outfiles and not (os.path.exists(FAST_Output) or os.path.exists(FAST_Output_txt))):
+            # Note: This will only check for fully completed .outb files
+            if self.overwrite_outfiles or (not self.overwrite_outfiles and not (os.path.exists(FAST_Output))):
                 failed = wrapper.execute()
                 if failed:
                     print('OpenFAST Failed! Please check the run logs.')
@@ -238,10 +239,10 @@ class runFAST_pywrapper(object):
                 for module in self.fst_vt['outlist']:
                     for channel in self.fst_vt['outlist'][module]:
                         if self.fst_vt['outlist'][module][channel]:
-                            output_dict[channel] = np.full(len(output_dict['Time']),fill_value=self.fail_value, dtype=np.uint8) 
+                            output_dict[channel] = np.full(len(output_dict['Time']),fill_value=self.fail_value, dtype=np.int_) 
 
                 # Add channel to indicate failed run
-                output_dict['openfast_failed'] = np.ones(len(output_dict['Time']), dtype=np.uint8)
+                output_dict['openfast_failed'] = np.ones(len(output_dict['Time']), dtype=np.int_)
 
                 output = AeroelasticOutput(output_dict, dlc=self.FAST_namingOut, name=self.FAST_InputFile,
                                            magnitude_channels=self.magnitude_channels, fatigue_channels=self.fatigue_channels)
